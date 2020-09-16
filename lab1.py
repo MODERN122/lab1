@@ -1,18 +1,38 @@
-import json
-import sqlite3
 from weather import TestProvider
+from sqlalchemy import Table, Column, Integer, String, Float, MetaData, create_engine
+from sqlalchemy.sql import select
 
-with sqlite3.connect('test.db') as connection:
-    c = connection.cursor()
-    # Create table
-    c.execute('''CREATE TABLE IF NOT EXISTS weather
-             (date_time text, temperature real, wind_speed real, visibility real, humidity real, dew real)''')
+if __name__ == '__main__':
+    engine = create_engine('sqlite:///test.db')
+    metadata = MetaData()
+    weather = Table(
+        'weather',
+        metadata,
+        Column('date_time', String),
+        Column('temperature', Float),
+        Column('wind_speed', Float),
+        Column('visibility', Float),
+        Column('humidity', Float),
+        Column('dew', Float),
+    )
+    metadata.create_all(engine)
+    with engine.connect() as connection:
+        # Insert a row of data
+        provider = TestProvider()
+        connection.execute(
+            weather.insert(),
+            [
+                {
+                    'date_time': item['datetime'],
+                    'temperature': item['temp'],
+                    'wind_speed': item['wspd'],
+                    'visibility': item['visibility'],
+                    'humidity': item['humidity'],
+                    'dew': item['dew'],
+                }
+                for item in provider.get_data('', '', '')
+            ],
+        )
 
-    # Insert a row of data
-    provider = TestProvider()
-    for item in provider.get_data('','',''):
-        c.execute("INSERT INTO weather VALUES (?,?,?,?,?,?)", (item['datetime'], item['temp'], item['wspd'], item['visibility'], item['humidity'], item['dew']))
-
-    for row in c.execute('SELECT * FROM weather ORDER BY date_time'):
-        print(row)
-
+        for row in connection.execute(select([weather])):
+            print(row)
