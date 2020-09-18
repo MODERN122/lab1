@@ -24,6 +24,7 @@ if __name__ == '__main__':
             for item in provider.get_data('', '', '')
         ],
     )
+    session.commit()
 
     for weather in session.query(Weather).order_by(Weather.date_time):
         print(weather)
